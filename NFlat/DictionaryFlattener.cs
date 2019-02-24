@@ -6,11 +6,6 @@ using System.Runtime.InteropServices;
 
 namespace NFlat
 {
-    public interface IConstructor
-    {
-
-    }
-
     public interface IPropertyMap<T>
     {
         void Deserialize(string rawValue, T @object);
@@ -69,47 +64,9 @@ namespace NFlat
         }
     }
 
-    public struct PropertySubstring
-    {
-        public PropertySubstring(string buffer, int offset, int length) : this()
-        {
-            Offset = offset;
-            Length = length;
-            Buffer = buffer;
-        }
-
-        public PropertySubstring(string buffer, int offset) : this()
-        {
-            Offset = offset;
-            Length = buffer.Length - offset;
-            Buffer = buffer;
-        }
-
-        public int Offset { get; }
-
-        public int Length { get; }
-
-        public string Buffer { get; }
-
-        public char this[int index]
-        {
-            get
-            {
-                return Buffer[Offset + index];
-            }
-        }
-
-        public ReadOnlySpan<char> AsSpan() => Buffer.AsSpan(Offset, Length);
-
-        public PropertySubstring GetLeftSide()
-        {
-            return new PropertySubstring(Buffer, 0, Length);
-        }
-    }
-
     public class DictionaryFlattener
     {
-        public Dictionary<StringSegment, object> Unflatten(Dictionary<string, string> data)
+        public Dictionary<StringSegment, object> Unflatten(Dictionary<string, string> data, char separator = '_')
         {
             var result = new Dictionary<StringSegment, object>();
             (Dictionary<StringSegment, object> @object, List<object> list) cur = default;
@@ -122,7 +79,7 @@ namespace NFlat
                 var last = 0;
                 do
                 {
-                    idx = p.IndexOf("_", last);
+                    idx = p.IndexOf(separator, last);
                     var temp = idx != -1 ? new StringSegment(p, last, idx - last) : new StringSegment(p, last, p.Length - last);
                     if(cur.@object != null)
                     {
