@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Microsoft.Extensions.Primitives;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 
@@ -38,7 +39,7 @@ namespace NFlat.Tests
             Assert.IsTrue(unflattenedObject.ContainsKey("Email"));
             Assert.AreEqual("something@something.com", unflattenedObject["Email"]);
             Assert.IsTrue(unflattenedObject.ContainsKey("Address"));
-            var address = unflattenedObject["Address"] as Dictionary<string, object>;
+            var address = unflattenedObject["Address"] as Dictionary<StringSegment, object>;
             Assert.IsNotNull(address);
             Assert.IsTrue(address.ContainsKey("Street"));
             Assert.AreEqual("Victory Street", address["Street"]);
@@ -64,14 +65,14 @@ namespace NFlat.Tests
             Assert.IsTrue(unflattenedObject.ContainsKey("Email"));
             Assert.AreEqual("something@something.com", unflattenedObject["Email"]);
             Assert.IsTrue(unflattenedObject.ContainsKey("Address"));
-            var address = unflattenedObject["Address"] as Dictionary<string, object>;
+            var address = unflattenedObject["Address"] as Dictionary<StringSegment, object>;
             Assert.IsNotNull(address);
             Assert.IsTrue(address.ContainsKey("Street"));
             Assert.AreEqual("Victory Street", address["Street"]);
             Assert.IsTrue(address.ContainsKey("PhoneNumber"));
             Assert.AreEqual("321321423", address["PhoneNumber"]);
             Assert.IsTrue(address.ContainsKey("Country"));
-            var country = address["Country"] as Dictionary<string, object>;
+            var country = address["Country"] as Dictionary<StringSegment, object>;
             Assert.IsNotNull(country);
             Assert.IsTrue(country.ContainsKey("Symbol"));
             Assert.AreEqual("ro", country["Symbol"]);

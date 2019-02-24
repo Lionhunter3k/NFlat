@@ -109,12 +109,12 @@ namespace NFlat
 
     public class DictionaryFlattener
     {
-        public Dictionary<string, object> Unflatten(Dictionary<string, string> data)
+        public Dictionary<StringSegment, object> Unflatten(Dictionary<string, string> data)
         {
-            var result = new Dictionary<string, object>();
-            (Dictionary<string, object> @object, List<object> list) cur = default;
+            var result = new Dictionary<StringSegment, object>();
+            (Dictionary<StringSegment, object> @object, List<object> list) cur = default;
             var idx = 0;
-            string prop = null;
+            StringSegment prop = StringSegment.Empty;
             foreach(var p in data.Keys)
             {
                 cur.@object = result;
@@ -135,12 +135,12 @@ namespace NFlat
                             }
                             else
                             {
-                                cur.@object.Add(prop, new Dictionary<string, object>());
+                                cur.@object.Add(prop, new Dictionary<StringSegment, object>());
                             }
                         }
-                        if (cur.@object[prop] is Dictionary<string, object>)
+                        if (cur.@object[prop] is Dictionary<StringSegment, object>)
                         {
-                            cur.@object = cur.@object[prop] as Dictionary<string, object>;
+                            cur.@object = cur.@object[prop] as Dictionary<StringSegment, object>;
                             cur.list = null;
                         }
                         else
@@ -151,19 +151,20 @@ namespace NFlat
                     }
                     else
                     {
-                        var index = int.Parse(prop);
+                        var propAsBytes = MemoryMarshal.AsBytes(prop.AsSpan());
                         var tempAsBytes = MemoryMarshal.AsBytes(temp.AsSpan());
+                        Utf8Parser.TryParse(propAsBytes, out int index, out var _);
                         if (Utf8Parser.TryParse(tempAsBytes, out int listIndex, out var _))
                         {
-                            cur.list.Add(new List<Dictionary<string, object>>());
+                            cur.list.Add(new List<Dictionary<StringSegment, object>>());
                         }
                         else
                         {
-                            cur.list.Add(new Dictionary<string, object>());
+                            cur.list.Add(new Dictionary<StringSegment, object>());
                         }
-                        if (cur.list[index] is Dictionary<string, object>)
+                        if (cur.list[index] is Dictionary<StringSegment, object>)
                         {
-                            cur.@object = cur.list[index] as Dictionary<string, object>;
+                            cur.@object = cur.list[index] as Dictionary<StringSegment, object>;
                             cur.list = null;
                         }
                         else
@@ -172,13 +173,13 @@ namespace NFlat
                             cur.list = cur.list[index] as List<object>;
                         }
                     }
-                    prop = temp.Value;
+                    prop = temp;
                     last = idx + 1;
                 } while (idx >= 0);
                 cur.@object?.Add(prop, data[p]);
                 cur.list?.Add(data[p]);
             }
-            return result[string.Empty] as Dictionary<string, object>;
+            return result[StringSegment.Empty] as Dictionary<StringSegment, object>;
         }
     }
 }
