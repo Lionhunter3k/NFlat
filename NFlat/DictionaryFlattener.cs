@@ -1,69 +1,10 @@
 ﻿using Microsoft.Extensions.Primitives;
-using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace NFlat
 {
-    public interface IPropertyMap<T>
-    {
-        void Deserialize(string rawValue, T @object);
-    }
-
-    public abstract class GenericPropertyMap<T, K> : IPropertyMap<T>
-    {
-        private readonly Action<T, K> _propertySetter;
-
-        protected GenericPropertyMap(Action<T, K> propertySetter)
-        {
-            _propertySetter = propertySetter;
-        }
-
-        protected abstract K Parse(string rawValue);
-
-        public void Deserialize(string rawValue, T @object)
-        {
-            _propertySetter(@object, Parse(rawValue));
-        }
-    }
-
-    public class Int32GenericPropertyMap<T> : GenericPropertyMap<T, Int32>
-    {
-        protected Int32GenericPropertyMap(Action<T, int> propertySetter) : base(propertySetter)
-        {
-        }
-
-        protected override int Parse(string rawValue)
-        {
-            return Int32.Parse(rawValue);
-        }
-    }
-
-    public class StringGenericPropertyMap<T> : GenericPropertyMap<T, string>
-    {
-        protected StringGenericPropertyMap(Action<T, string> propertySetter) : base(propertySetter)
-        {
-        }
-
-        protected override string Parse(string rawValue)
-        {
-            return rawValue;
-        }
-    }
-
-    public class DecimalGenericPropertyMap<T> : GenericPropertyMap<T, decimal>
-    {
-        protected DecimalGenericPropertyMap(Action<T, decimal> propertySetter) : base(propertySetter)
-        {
-        }
-
-        protected override decimal Parse(string rawValue)
-        {
-            return decimal.Parse(rawValue);
-        }
-    }
-
     public class DictionaryFlattener
     {
         public Dictionary<StringSegment, object> Unflatten(Dictionary<string, string> data, char separator = '_')
@@ -83,6 +24,7 @@ namespace NFlat
                     var temp = idx != -1 ? new StringSegment(p, last, idx - last) : new StringSegment(p, last, p.Length - last);
                     if(cur.@object != null)
                     {
+                        var leftSideOfProp = new StringSegment(prop.Buffer, 0, prop.Offset + prop.Length);
                         if(!cur.@object.ContainsKey(prop))
                         {
                             var tempAsBytes = MemoryMarshal.AsBytes(temp.AsSpan());
