@@ -143,13 +143,13 @@ namespace NFlat
                             constructorPropertyMap.Construct(cur);
                         }
                         var propAsBytes = MemoryMarshal.AsBytes(prop.AsSpan());
-                        var tempAsBytes = MemoryMarshal.AsBytes(temp.AsSpan());
                         if (!Utf8Parser.TryParse(propAsBytes, out int _, out var _))
                         {
                             cur = constructorPropertyMap.Get(cur);
                         }
                         else
                         {
+                            var tempAsBytes = MemoryMarshal.AsBytes(temp.AsSpan());
                             if (!Utf8Parser.TryParse(tempAsBytes, out int _, out var _))
                             {
                                 cur = constructorPropertyMap.Get(cur);
