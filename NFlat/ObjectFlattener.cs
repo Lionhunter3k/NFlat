@@ -10,58 +10,76 @@ namespace NFlat
 {
     public interface IPropertyMap<TRawValue>
     {
-        void Deserialize(TRawValue rawValue, object @object);
+        object Deserialize(TRawValue rawValue, object @object);
     }
 
     public interface IConstructorMap
     {
-        void Construct(object @object);
+        object Construct(object @object);
 
-        object Get(object @object);
+        object Get(object @object, int? index);
+
+        void Set(object @object, object value, int? index);
     }
 
-    public class GenericConstructorMap<T> : IConstructorMap
+    public class GenericConstructorMap<T, K> : IConstructorMap
     {
-        private readonly Action<T> _constructor;
-        private readonly Func<T, object> _getter;
+        private readonly Func<T, T> _constructor;
+        private readonly Func<T, int?, K> _getter;
+        private readonly Action<T, K, int?> _setter;
 
-        public GenericConstructorMap(Action<T> constructor, Func<T, object> getter)
+        public GenericConstructorMap(Func<T, T> constructor, Func<T, int?, K> getter, Action<T, K, int?> setter)
         {
             _constructor = constructor;
             _getter = getter;
+            _setter = setter;
         }
 
-        public void Construct(object @object)
+        public GenericConstructorMap(Func<T, T> constructor, Func<T, K> getter, Action<T, K> setter)
         {
-            _constructor((T)@object);
+            _constructor = constructor;
+            _getter = (u, i) => getter(u);
+            _setter = (u, k, i) => setter(u, k);
         }
 
-        public object Get(object @object)
+        public object Construct(object @object)
         {
-            return _getter((T)@object);
+            return _constructor((T)@object);
+        }
+
+        public object Get(object @object, int? index)
+        {
+            return _getter((T)@object, index);
+        }
+
+        public void Set(object @object, object value, int? index)
+        {
+            _setter((T)@object, (K)value, index);
         }
     }
 
+
+
     public abstract class BasePropertyMap<T, K> : IPropertyMap<string>
     {
-        private readonly Action<T, K> _propertySetter;
+        private readonly Func<T, K, T> _propertySetter;
 
-        protected BasePropertyMap(Action<T, K> propertySetter)
+        protected BasePropertyMap(Func<T, K, T> propertySetter)
         {
             _propertySetter = propertySetter;
         }
 
         protected abstract K Parse(string rawValue);
 
-        public void Deserialize(string rawValue, object @object)
+        public object Deserialize(string rawValue, object @object)
         {
-            _propertySetter((T)@object, Parse(rawValue));
+            return _propertySetter((T)@object, Parse(rawValue));
         }
     }
 
     public class Int32PropertyMap<T> : BasePropertyMap<T, Int32>
     {
-        public Int32PropertyMap(Action<T, int> propertySetter) : base(propertySetter)
+        public Int32PropertyMap(Func<T, int, T> propertySetter) : base(propertySetter)
         {
         }
 
@@ -73,7 +91,7 @@ namespace NFlat
 
     public class StringPropertyMap<T> : BasePropertyMap<T, string>
     {
-        public StringPropertyMap(Action<T, string> propertySetter) : base(propertySetter)
+        public StringPropertyMap(Func<T, string, T> propertySetter) : base(propertySetter)
         {
         }
 
@@ -85,7 +103,7 @@ namespace NFlat
 
     public class DecimalPropertyMap<T> : BasePropertyMap<T, decimal>
     {
-        public DecimalPropertyMap(Action<T, decimal> propertySetter) : base(propertySetter)
+        public DecimalPropertyMap(Func<T, decimal, T> propertySetter) : base(propertySetter)
         {
         }
 
@@ -126,6 +144,7 @@ namespace NFlat
             object cur = default;
             var idx = 0;
             var processedMaps = new HashSet<StringSegment>();
+            var stackOfSets = new Stack<(object @objectToSetOn, IConstructorMap map, int? index)>();
             foreach (var p in data.Keys.OrderBy(q => q))
             {
                 cur = result;
@@ -140,28 +159,38 @@ namespace NFlat
                     {
                         if (processedMaps.Add(leftSideOfProp))
                         {
-                            constructorPropertyMap.Construct(cur);
+                            cur = constructorPropertyMap.Construct(cur);
                         }
                         var propAsBytes = MemoryMarshal.AsBytes(prop.AsSpan());
-                        if (!Utf8Parser.TryParse(propAsBytes, out int _, out var _))
+                        if (!Utf8Parser.TryParse(propAsBytes, out int propIndex, out var _))
                         {
-                            cur = constructorPropertyMap.Get(cur);
+                            stackOfSets.Push((cur, constructorPropertyMap, null));
+                            var @objectToBeSet = constructorPropertyMap.Get(cur, null);
+                            cur = objectToBeSet;
                         }
                         else
                         {
                             var tempAsBytes = MemoryMarshal.AsBytes(temp.AsSpan());
                             if (!Utf8Parser.TryParse(tempAsBytes, out int _, out var _))
                             {
-                                cur = constructorPropertyMap.Get(cur);
+                                stackOfSets.Push((cur, constructorPropertyMap, propIndex));
+                                var @objectToBeSet = constructorPropertyMap.Get(cur, propIndex);
+                                cur = objectToBeSet;
                             }
                         }
                     }
                     prop = temp;
                     last = idx + 1;
                 } while (idx >= 0);
-                if (_propertyMaps.TryGetValue(p, out var propertyMap) && processedMaps.Add(p))
+                if (_propertyMaps.TryGetValue(p, out var propertyMap))
                 {
-                    propertyMap.Deserialize(data[p], cur);
+                    cur = propertyMap.Deserialize(data[p], cur);
+                }
+                while(stackOfSets.Count > 0)
+                {
+                    var (objectToSetOn, map, index) = stackOfSets.Pop();
+                    map.Set(objectToSetOn, cur, index);
+                    cur = objectToSetOn;
                 }
             }
             return result;

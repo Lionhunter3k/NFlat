@@ -17,7 +17,7 @@ namespace NFlat.Tests
         public List<Country> Countries { get; set; }
     }
 
-    public class Address
+    public struct Address
     {
         public string Street { get; set; }
 
@@ -47,8 +47,8 @@ namespace NFlat.Tests
                 { "Email", "something@something.com" }
             };
             var unflattenedObject = new ObjectFlattener<User, string>()
-                .MapProperty(nameof(User.Username), new StringPropertyMap<User>((u,v) => u.Username = v))
-                .MapProperty(nameof(User.Email), new StringPropertyMap<User>((u, v) => u.Email = v))
+                .MapProperty(nameof(User.Username), new StringPropertyMap<User>((u,v) => { u.Username = v; return u; }))
+                .MapProperty(nameof(User.Email), new StringPropertyMap<User>((u, v) => { u.Email = v; return u; }))
                 .Unflatten(flatObject);
             Assert.AreEqual("John", unflattenedObject.Username);
             Assert.AreEqual("something@something.com", unflattenedObject.Email);
@@ -65,11 +65,11 @@ namespace NFlat.Tests
                 { "Email", "something@something.com" },
             };
             var unflattenedObject = new ObjectFlattener<User, string>()
-                .MapProperty(nameof(User.Username), new StringPropertyMap<User>((u, v) => u.Username = v))
-                .MapProperty(nameof(User.Email), new StringPropertyMap<User>((u, v) => u.Email = v))
-                .MapNested(nameof(User.Address), new GenericConstructorMap<User>(u => u.Address = new Address(), u => u.Address))
-                .MapProperty("Address_Street", new StringPropertyMap<Address>((u, v) => u.Street = v))
-                .MapProperty("Address_PhoneNumber", new Int32PropertyMap<Address>((u, v) => u.PhoneNumber = v))
+                .MapProperty(nameof(User.Username), new StringPropertyMap<User>((u, v) => { u.Username = v; return u; }))
+                .MapProperty(nameof(User.Email), new StringPropertyMap<User>((u, v) => { u.Email = v; return u; }))
+                .MapNested(nameof(User.Address), new GenericConstructorMap<User, Address>(u => { u.Address = new Address(); return u; }, u => u.Address, (u, v) => u.Address = v))
+                .MapProperty("Address_Street", new StringPropertyMap<Address>((u, v) => { u.Street = v; return u; }))
+                .MapProperty("Address_PhoneNumber", new Int32PropertyMap<Address>((u, v) => { u.PhoneNumber = v; return u; }))
                 .Unflatten(flatObject);
             Assert.AreEqual("John", unflattenedObject.Username);
             Assert.AreEqual("something@something.com", unflattenedObject.Email);
@@ -92,14 +92,14 @@ namespace NFlat.Tests
                 { "Email", "something@something.com" }
             };
             var unflattenedObject = new ObjectFlattener<User, string>()
-               .MapProperty(nameof(User.Username), new StringPropertyMap<User>((u, v) => u.Username = v))
-               .MapProperty(nameof(User.Email), new StringPropertyMap<User>((u, v) => u.Email = v))
-               .MapNested(nameof(User.Address), new GenericConstructorMap<User>(u => u.Address = new Address(), u => u.Address))
-               .MapProperty("Address_Street", new StringPropertyMap<Address>((u, v) => u.Street = v))
-               .MapProperty("Address_PhoneNumber", new Int32PropertyMap<Address>((u, v) => u.PhoneNumber = v))
-               .MapNested("Address_Country", new GenericConstructorMap<Address>(u => u.Country = new Country(), u => u.Country))
-               .MapProperty("Address_Country_Symbol", new StringPropertyMap<Country>((u, v) => u.Symbol = v))
-               .MapProperty("Address_Country_Name", new StringPropertyMap<Country>((u, v) => u.Name = v))
+                .MapProperty(nameof(User.Username), new StringPropertyMap<User>((u, v) => { u.Username = v; return u; }))
+                .MapProperty(nameof(User.Email), new StringPropertyMap<User>((u, v) => { u.Email = v; return u; }))
+                .MapNested(nameof(User.Address), new GenericConstructorMap<User, Address>(u => { u.Address = new Address(); return u; }, u => u.Address, (u, v) => u.Address = v))
+                .MapProperty("Address_Street", new StringPropertyMap<Address>((u, v) => { u.Street = v; return u; }))
+                .MapProperty("Address_PhoneNumber", new Int32PropertyMap<Address>((u, v) => { u.PhoneNumber = v; return u; }))
+               .MapNested("Address_Country", new GenericConstructorMap<Address, Country>(u => { u.Country = new Country(); return u; }, u => u.Country, (u, v) => u.Country = v))
+               .MapProperty("Address_Country_Symbol", new StringPropertyMap<Country>((u, v) => { u.Symbol = v; return u; }))
+               .MapProperty("Address_Country_Name", new StringPropertyMap<Country>((u, v) => { u.Name = v; return u; }))
                .Unflatten(flatObject);
             Assert.AreEqual("John", unflattenedObject.Username);
             Assert.AreEqual("something@something.com", unflattenedObject.Email);
@@ -132,20 +132,20 @@ namespace NFlat.Tests
                 { "Countries_1_Name", "USA" },
             };
             var unflattenedObject = new ObjectFlattener<User, string>()
-               .MapProperty(nameof(User.Username), new StringPropertyMap<User>((u, v) => u.Username = v))
-               .MapProperty(nameof(User.Email), new StringPropertyMap<User>((u, v) => u.Email = v))
-               .MapNested(nameof(User.Address), new GenericConstructorMap<User>(u => u.Address = new Address(), u => u.Address))
-               .MapProperty("Address_Street", new StringPropertyMap<Address>((u, v) => u.Street = v))
-               .MapProperty("Address_PhoneNumber", new Int32PropertyMap<Address>((u, v) => u.PhoneNumber = v))
-               .MapNested("Address_Country", new GenericConstructorMap<Address>(u => u.Country = new Country(), u => u.Country))
-               .MapProperty("Address_Country_Symbol", new StringPropertyMap<Country>((u, v) => u.Symbol = v))
-               .MapProperty("Address_Country_Name", new StringPropertyMap<Country>((u, v) => u.Name = v))
-               .MapNested("Address_Ids", new GenericConstructorMap<Address>(u => u.Ids = new List<int>(), u => u.Ids))
-               .MapProperty("Address_Ids_*", new Int32PropertyMap<List<int>>((u, v) => u.Add(v)))
-               .MapNested("Countries", new GenericConstructorMap<User>(u => u.Countries = new List<Country>(), u => u.Countries))
-               .MapNested("Countries_*", new GenericConstructorMap<List<Country>>((u) => u.Add(new Country()), u => u.Last()))
-               .MapProperty("Countries_*_Symbol", new StringPropertyMap<Country>((u, v) => u.Symbol = v))
-               .MapProperty("Countries_*_Name", new StringPropertyMap<Country>((u, v) => u.Name = v))
+   .MapProperty(nameof(User.Username), new StringPropertyMap<User>((u, v) => { u.Username = v; return u; }))
+                .MapProperty(nameof(User.Email), new StringPropertyMap<User>((u, v) => { u.Email = v; return u; }))
+                .MapNested(nameof(User.Address), new GenericConstructorMap<User, Address>(u => { u.Address = new Address(); return u; }, u => u.Address, (u, v) => u.Address = v))
+                .MapProperty("Address_Street", new StringPropertyMap<Address>((u, v) => { u.Street = v; return u; }))
+                .MapProperty("Address_PhoneNumber", new Int32PropertyMap<Address>((u, v) => { u.PhoneNumber = v; return u; }))
+               .MapNested("Address_Country", new GenericConstructorMap<Address, Country>(u => { u.Country = new Country(); return u; }, u => u.Country, (u, v) => u.Country = v))
+               .MapProperty("Address_Country_Symbol", new StringPropertyMap<Country>((u, v) => { u.Symbol = v; return u; }))
+               .MapProperty("Address_Country_Name", new StringPropertyMap<Country>((u, v) => { u.Name = v; return u; }))
+               .MapNested("Address_Ids", new GenericConstructorMap<Address, List<int>>(u => { u.Ids = new List<int>(); return u; }, u => u.Ids, (u,v) => u.Ids = v))
+               .MapProperty("Address_Ids_*", new Int32PropertyMap<List<int>>((u, v) => { u.Add(v); return u; }))
+               .MapNested("Countries", new GenericConstructorMap<User, List<Country>> (u => { u.Countries = new List<Country>(); return u; }, u => u.Countries, (u, v) => u.Countries = v))
+               .MapNested("Countries_*", new GenericConstructorMap<List<Country>, Country>((u) => { u.Add(new Country()); return u; }, (u, i) => u[i.Value], (u, v, i) => u[i.Value] = v))
+               .MapProperty("Countries_*_Symbol", new StringPropertyMap<Country>((u, v) => { u.Symbol = v; return u; }))
+               .MapProperty("Countries_*_Name", new StringPropertyMap<Country>((u, v) => { u.Name = v; return u; }))
                .Unflatten(flatObject);
             Assert.AreEqual("John", unflattenedObject.Username);
             Assert.AreEqual("something@something.com", unflattenedObject.Email);
