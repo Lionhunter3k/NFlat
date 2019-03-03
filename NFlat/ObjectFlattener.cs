@@ -19,23 +19,23 @@ namespace NFlat
 
         object Get(object @object, int? index);
 
-        void Set(object @object, object value, int? index);
+        object Set(object @object, object value, int? index);
     }
 
     public class GenericConstructorMap<T, K> : IConstructorMap
     {
         private readonly Func<T, T> _constructor;
         private readonly Func<T, int?, K> _getter;
-        private readonly Action<T, K, int?> _setter;
+        private readonly Func<T, K, int?, T> _setter;
 
-        public GenericConstructorMap(Func<T, T> constructor, Func<T, int?, K> getter, Action<T, K, int?> setter)
+        public GenericConstructorMap(Func<T, T> constructor, Func<T, int?, K> getter, Func<T, K, int?, T> setter)
         {
             _constructor = constructor;
             _getter = getter;
             _setter = setter;
         }
 
-        public GenericConstructorMap(Func<T, T> constructor, Func<T, K> getter, Action<T, K> setter)
+        public GenericConstructorMap(Func<T, T> constructor, Func<T, K> getter, Func<T, K, T> setter)
         {
             _constructor = constructor;
             _getter = (u, i) => getter(u);
@@ -52,9 +52,9 @@ namespace NFlat
             return _getter((T)@object, index);
         }
 
-        public void Set(object @object, object value, int? index)
+        public object Set(object @object, object value, int? index)
         {
-            _setter((T)@object, (K)value, index);
+            return _setter((T)@object, (K)value, index);
         }
     }
 
@@ -165,8 +165,7 @@ namespace NFlat
                         if (!Utf8Parser.TryParse(propAsBytes, out int propIndex, out var _))
                         {
                             stackOfSets.Push((cur, constructorPropertyMap, null));
-                            var @objectToBeSet = constructorPropertyMap.Get(cur, null);
-                            cur = objectToBeSet;
+                            cur = constructorPropertyMap.Get(cur, null);
                         }
                         else
                         {
@@ -174,8 +173,7 @@ namespace NFlat
                             if (!Utf8Parser.TryParse(tempAsBytes, out int _, out var _))
                             {
                                 stackOfSets.Push((cur, constructorPropertyMap, propIndex));
-                                var @objectToBeSet = constructorPropertyMap.Get(cur, propIndex);
-                                cur = objectToBeSet;
+                                cur = constructorPropertyMap.Get(cur, propIndex);
                             }
                         }
                     }
@@ -189,8 +187,7 @@ namespace NFlat
                 while(stackOfSets.Count > 0)
                 {
                     var (objectToSetOn, map, index) = stackOfSets.Pop();
-                    map.Set(objectToSetOn, cur, index);
-                    cur = objectToSetOn;
+                    cur = map.Set(objectToSetOn, cur, index);
                 }
             }
             return result;
