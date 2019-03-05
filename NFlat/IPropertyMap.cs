@@ -6,6 +6,8 @@ namespace NFlat
 {
     public interface IPropertyMap<TRawValue>
     {
+        Type Type { get; }
+
         object Deserialize(TRawValue rawValue, object @object);
     }
 }

@@ -6,6 +6,8 @@ namespace NFlat
 {
     public interface IConstructorMap
     {
+        Type Type { get; }
+
         object Construct(object @object);
 
         object Get(object @object, int? index);

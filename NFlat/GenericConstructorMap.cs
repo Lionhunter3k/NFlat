@@ -24,6 +24,8 @@ namespace NFlat
             _setter = (u, k, i) => setter(u, k);
         }
 
+        public Type Type => typeof(T);
+
         public object Construct(object @object)
         {
             return _constructor((T)@object);

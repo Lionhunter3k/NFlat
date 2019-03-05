@@ -8,6 +8,8 @@ namespace NFlat
     {
         private readonly Func<T, K, T> _propertySetter;
 
+        public Type Type => typeof(T);
+
         protected BasePropertyMap(Func<T, K, T> propertySetter)
         {
             _propertySetter = propertySetter;

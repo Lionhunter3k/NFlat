@@ -36,13 +36,12 @@ namespace NFlat
         public T Unflatten(IDictionary<string, TRawValue> data, char separator = '_')
         {
             var result = new T();
-            object cur = default;
+            object cur = result;
             var idx = 0;
             var processedMaps = new HashSet<StringSegment>();
-            var stackOfSets = new Stack<(object @objectToSetOn, IConstructorMap map, int? index)>();
-            foreach (var p in data.Keys.OrderBy(q => q))
+            var stackOfSets = new Stack<(object @objectToSetOn, IConstructorMap map, int? index, StringSegment propertyPath)>();
+            foreach (var p in data.Keys.OrderByDescending(q => q.Length))
             {
-                cur = result;
                 var prop = StringSegment.Empty;
                 var last = 0;
                 do
@@ -59,16 +58,23 @@ namespace NFlat
                         var propAsBytes = MemoryMarshal.AsBytes(prop.AsSpan());
                         if (!Utf8Parser.TryParse(propAsBytes, out int propIndex, out var _))
                         {
-                            stackOfSets.Push((cur, constructorPropertyMap, null));
-                            cur = constructorPropertyMap.Get(cur, null);
+                            if (!stackOfSets.Any(q => q.propertyPath == leftSideOfProp))
+                            {
+                                stackOfSets.Push((cur, constructorPropertyMap, null, leftSideOfProp));
+                                cur = constructorPropertyMap.Get(cur, null);
+                            }
                         }
                         else
                         {
                             var tempAsBytes = MemoryMarshal.AsBytes(temp.AsSpan());
                             if (!Utf8Parser.TryParse(tempAsBytes, out int _, out var _))
                             {
-                                stackOfSets.Push((cur, constructorPropertyMap, propIndex));
-                                cur = constructorPropertyMap.Get(cur, propIndex);
+                                if (!stackOfSets.Any(q => q.propertyPath == leftSideOfProp))
+                                {
+                                    stackOfSets.Push((cur, constructorPropertyMap, propIndex, leftSideOfProp));
+                                    cur = constructorPropertyMap.Get(cur, propIndex);
+                                }
+
                             }
                         }
                     }
@@ -78,11 +84,11 @@ namespace NFlat
                 if (_propertyMaps.TryGetValue(p, out var propertyMap))
                 {
                     cur = propertyMap.Deserialize(data[p], cur);
-                }
-                while(stackOfSets.Count > 0)
-                {
-                    var (objectToSetOn, map, index) = stackOfSets.Pop();
-                    cur = map.Set(objectToSetOn, cur, index);
+                    while (stackOfSets.Count > 0)
+                    {
+                        var (objectToSetOn, map, index, _) = stackOfSets.Pop();
+                        cur = map.Set(objectToSetOn, cur, index);
+                    }
                 }
             }
             return result;
