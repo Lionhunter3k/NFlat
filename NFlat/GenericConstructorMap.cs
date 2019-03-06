@@ -6,39 +6,25 @@ namespace NFlat
 {
     public class GenericConstructorMap<T, K> : IConstructorMap
     {
-        private readonly Func<T, T> _constructor;
-        private readonly Func<T, int?, K> _getter;
-        private readonly Func<T, K, int?, T> _setter;
+        private readonly Func<K> _constructor;
+        private readonly Func<T, K, T> _setter;
 
-        public GenericConstructorMap(Func<T, T> constructor, Func<T, int?, K> getter, Func<T, K, int?, T> setter)
+        public GenericConstructorMap(Func<K> constructor, Func<T, K, T> setter)
         {
             _constructor = constructor;
-            _getter = getter;
             _setter = setter;
-        }
-
-        public GenericConstructorMap(Func<T, T> constructor, Func<T, K> getter, Func<T, K, T> setter)
-        {
-            _constructor = constructor;
-            _getter = (u, i) => getter(u);
-            _setter = (u, k, i) => setter(u, k);
         }
 
         public Type Type => typeof(T);
 
-        public object Construct(object @object)
+        public object Construct()
         {
-            return _constructor((T)@object);
+            return _constructor();
         }
 
-        public object Get(object @object, int? index)
+        public object Set(object @object, object value)
         {
-            return _getter((T)@object, index);
-        }
-
-        public object Set(object @object, object value, int? index)
-        {
-            return _setter((T)@object, (K)value, index);
+            return _setter((T)@object, (K)value);
         }
     }
 }

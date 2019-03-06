@@ -8,10 +8,8 @@ namespace NFlat
     {
         Type Type { get; }
 
-        object Construct(object @object);
+        object Construct();
 
-        object Get(object @object, int? index);
-
-        object Set(object @object, object value, int? index);
+        object Set(object @object, object value);
     }
 }
